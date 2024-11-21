@@ -1,0 +1,26 @@
+---
+title: "PHP 2550: Project 3"
+author: "Peirong Hao"
+format: pdf
+include-in-header: 
+  text: |
+    \usepackage{fvextra}
+    \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+editor: visual
+execute:
+  echo: false
+  warning: false
+  error: false
+  eval: true
+  output: true
+---
+
+# Introduction
+
+
+\newpage
+
+# Code Appendix
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
