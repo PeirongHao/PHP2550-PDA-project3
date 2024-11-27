@@ -18,7 +18,58 @@ execute:
 # Introduction
 
 ```{r}
+#simulation
+set.seed(123456)
+library(lme4)
 
+#data generation
+#G clusters, each cluster has R members
+#clusters are independent
+#members in each cluster share same cluster mean (correlated)
+DataSim <- function(G, R, p.trt, alpha, beta, gamma, sigma){
+  data <-data.frame(matrix(ncol = 4, nrow = G*R))
+  colnames(data) <- c('G', 'R', 'X', 'Y', 
+                      'p.trt', 'alpha', 'beta', 'gamma', 'sigma')
+  # data[,"G"] <- rep(1:G, each=R)
+  # data[,"R"] <- rep(1:R, G)
+  
+  # Generate X: 0 for ctrl, 1 for trt
+  x <- rbernoulli(G, p.trt)
+  mu.0 <- alpha + beta * x
+  
+  epsilon <- rnorm(n=G, mean=0, sd=gamma)
+  mu <- mu.0 + epsilon
+  
+  for(i in 1:G){
+    eps <- rnorm(n=R, mean=0, sd=gamma)
+    y <- mu[i] + eps
+    for(j in 1:R){
+      row.num <- i*R-(R-j)
+      data[row.num, ] <- c(i, j, x[i], y[j], 
+                           p.trt, alpha, beta, gamma, sigma)
+    }
+  }
+  return(data)
+}
+
+DataGen <- function(folder.data, filename, coef = 0.01, m = 100, sd = 10, intercept = 10){
+  
+  # Simulate data
+  data <- sim_data(coef, m, sd, intercept)
+  
+  # Create data folder
+  if (!dir.exists(folder.data)) {  # Check if the folder already exists
+    dir.create(folder.data)
+  } 
+  
+  # Create csv file
+  write.csv(data, paste0(folder.data, filename, "_data.csv"), row.names=FALSE)
+  
+}
+
+
+
+lmer()
 ```
 
 
