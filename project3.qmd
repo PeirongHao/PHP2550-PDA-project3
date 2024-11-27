@@ -28,8 +28,7 @@ library(lme4)
 #members in each cluster share same cluster mean (correlated)
 DataSim <- function(G, R, p.trt, alpha, beta, gamma, sigma){
   data <-data.frame(matrix(ncol = 4, nrow = G*R))
-  colnames(data) <- c('G', 'R', 'X', 'Y', 
-                      'p.trt', 'alpha', 'beta', 'gamma', 'sigma')
+  colnames(data) <- c('G', 'R', 'X', 'Y', 'p.trt', 'alpha', 'beta', 'gamma', 'sigma')
   # data[,"G"] <- rep(1:G, each=R)
   # data[,"R"] <- rep(1:R, G)
   
@@ -52,10 +51,10 @@ DataSim <- function(G, R, p.trt, alpha, beta, gamma, sigma){
   return(data)
 }
 
-DataGen <- function(folder.data, filename, coef = 0.01, m = 100, sd = 10, intercept = 10){
+DataGen <- function(folder.data, filename, G, R, p.trt, alpha, beta, gamma, sigma){
   
   # Simulate data
-  data <- sim_data(coef, m, sd, intercept)
+  data <- DataSim(G, R, p.trt, alpha, beta, gamma, sigma)
   
   # Create data folder
   if (!dir.exists(folder.data)) {  # Check if the folder already exists
@@ -64,11 +63,11 @@ DataGen <- function(folder.data, filename, coef = 0.01, m = 100, sd = 10, interc
   
   # Create csv file
   write.csv(data, paste0(folder.data, filename, "_data.csv"), row.names=FALSE)
-  
 }
+```
 
 
-
+```{r}
 lmer()
 ```
 
