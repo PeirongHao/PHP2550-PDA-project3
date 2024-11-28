@@ -20,15 +20,17 @@ execute:
 ```{r}
 #simulation
 set.seed(123456)
+library(purrr)
 library(lme4)
+library(lmerTest)
 
 #data generation
 #G clusters, each cluster has R members
 #clusters are independent
 #members in each cluster share same cluster mean (correlated)
-DataSim <- function(G, R, p.trt, alpha, beta, gamma, sigma){
-  data <-data.frame(matrix(ncol = 4, nrow = G*R))
-  colnames(data) <- c('G', 'R', 'X', 'Y', 'p.trt', 'alpha', 'beta', 'gamma', 'sigma')
+DataSim <- function(G, R, p.trt=0.5, alpha, beta, gamma, sigma=1, method){
+  data <-data.frame(matrix(ncol = 7, nrow = G*R))
+  colnames(data) <- c('G', 'R', 'X', 'Y', 'alpha', 'beta', 'gamma')
   # data[,"G"] <- rep(1:G, each=R)
   # data[,"R"] <- rep(1:R, G)
   
@@ -38,23 +40,38 @@ DataSim <- function(G, R, p.trt, alpha, beta, gamma, sigma){
   
   epsilon <- rnorm(n=G, mean=0, sd=gamma)
   mu <- mu.0 + epsilon
+  if(method == "poisson"){
+      mu <- exp(mu)#???
+    }
+  #mu <- ifelse(method=="poisson", exp(mu.0 + epsilon), mu.0 + epsilon)
   
   for(i in 1:G){
-    eps <- rnorm(n=R, mean=0, sd=gamma)
-    y <- mu[i] + eps
+    if(method == "poisson"){
+      y <- rpois(R, lambda = mu[i]) 
+    }
+    else{
+      eps <- rnorm(n=R, mean=0, sd=sigma)
+      y <- mu[i] + eps
+    }
+    
     for(j in 1:R){
       row.num <- i*R-(R-j)
       data[row.num, ] <- c(i, j, x[i], y[j], 
-                           p.trt, alpha, beta, gamma, sigma)
+                           alpha, beta, gamma)
     }
   }
   return(data)
 }
 
-DataGen <- function(folder.data, filename, G, R, p.trt, alpha, beta, gamma, sigma){
-  
+#alpha refers to intercept
+#method = "poisson" or "normal"
+DataGen <- function(folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/", 
+                    filename, alpha=0, beta=1, gamma=1,
+                    B, C1, relative.cost, G, method){
+  R <- BudgetOpt(B=B, C1=C1, relative.cost=relative.cost, G=G)
+    
   # Simulate data
-  data <- DataSim(G, R, p.trt, alpha, beta, gamma, sigma)
+  data <- DataSim(G, R, p.trt, alpha, beta, gamma, sigma, method)
   
   # Create data folder
   if (!dir.exists(folder.data)) {  # Check if the folder already exists
@@ -64,11 +81,115 @@ DataGen <- function(folder.data, filename, G, R, p.trt, alpha, beta, gamma, sigm
   # Create csv file
   write.csv(data, paste0(folder.data, filename, "_data.csv"), row.names=FALSE)
 }
-```
 
 
-```{r}
-lmer()
+# #test data generation
+# for(i in 1:2){
+#   DataGen(filename = paste0("sim",'_',i))
+# }
+# read.csv("~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv")
+
+
+#fit hierarchical model
+#method = "poisson" or "normal"
+ModelFit <- function(data.path = "~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv",
+                     a=0.05, true.beta, method){
+  
+  data <- read.csv(data.path)
+  
+  if(method == "poisson"){
+      mdl <- glmer(Y ~ X + (1 | G), data=data, family="poisson")#???
+    }
+  else{
+      mdl <- lmer(Y ~ X + (1 | G), data=data)#???
+    }
+  
+  #mdl <- lmer(Y ~ 1 + X + (1 | G), data=data)#???
+  #ranef(mdl)
+  #est.beta <- fixef(mdl)["X"]
+  #return(est.beta)
+  
+  #do we need to worry about p-value < or > alpha=0.05???
+  summ <- summary(mdl)
+  p <- summ$coefficients["X", "Pr(>|t|)"]
+  reject.null <- p<=a
+  est.beta <- ifelse(reject.null, summ$coefficients["X", "Estimate"], 0)#fixed effect
+  
+  ci.lower <- ifelse(reject.null, confint(mdl)["X", "2.5 %"], 0)
+  ci.upper <- ifelse(reject.null, confint(mdl)["X", "97.5 %"], 0)
+  coverage.count <- ifelse(ci.lower <= true.beta & true.beta <= ci.upper, 1, 0)#???
+  
+  se <- summ$coefficients["X", "Std. Error"]#???
+  
+  bias <- est.beta-true.beta#???
+  bias.perc <- ifelse(true.beta!=0, bias/true.beta, NA)#???
+  mse <- bias^2#???
+  
+  measure <- c(reject.null, est.beta, coverage.count, se, bias, bias.perc, mse)
+  
+  #do we need to record the same measures for alpha and gamma???
+  est.alpha <- summ$coefficients["(Intercept)", "Estimate"]#fixed effect
+  est.gamma <- attr(VarCorr(mdl)$G, "stddev")#???
+  
+  return(measure)
+}
+
+
+#make sure C1 > C2
+BudgetOpt <- function(B=1000, C1=2, relative.cost=2, G=10){
+  C2 <- C1/relative.cost
+  #constraint: C1*G + C2*G*(R-1) <= B
+  R <- floor(1 + (B-C1*G)/(C2*G))
+  return(R)
+}
+
+#param: C1, relative.cost, G, p.trt???, alpha, beta, gamma, sigma???
+ParamVary <- function(max.iter = 1000, param.ls, param, method,  
+                      folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
+                      folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/"){
+  
+  for(i in 1:length(param.ls)){
+      param = param.ls[i]
+      
+      for(j in 1:max.iter){
+        if(j==1){
+          perf.measure <- as.data.frame(matrix(NA, nrow = max.iter, ncol = 7))
+          colnames(perf.measure) <- c("reject.null", "est.beta", "coverage.count", "se", 
+                                      "bias", "bias.perc", "mse")
+        }
+        
+        filename = paste0("sim",'_',i,'_',j,'_',param,'_',method)
+        data_path = paste0(folder.data, filename, "_data.csv")
+          
+        if(param=="coef"){
+          gen_data(folder.data, filename, coef = param)
+          perf.measure[j,] <- fit_mdl(data_path, true.beta=param)
+        }
+        else if(param=="samp.size"){
+          gen_data(folder.data, filename, m = param)
+          perf.measure[j,] <- fit_mdl(data_path)
+        }
+        else{#param = "sd"
+          gen_data(folder.data, filename, sd = param)
+          perf.measure[j,] <- fit_mdl(data_path)
+        }
+        
+        if(j==max.iter){
+          
+          # Create performance folder
+          if (!dir.exists(folder.perf)) {  # Check if the folder already exists
+            dir.create(folder.perf)
+          } 
+          
+          # Create csv file
+          filename.perf = paste0("sim",'_',i,'_',param)
+          write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)
+        }
+
+      }
+  }
+}
+
 ```
 
 
