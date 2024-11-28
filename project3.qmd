@@ -23,6 +23,7 @@ set.seed(123456)
 library(purrr)
 library(lme4)
 library(lmerTest)
+library(blme)
 library(Rlab)#??? might not need
 
 #data generation
@@ -66,10 +67,9 @@ DataSim <- function(G, R, p.trt=0.5, alpha, beta, gamma, sigma=1, method){
 
 #alpha refers to intercept
 #method = "poisson" or "normal"
-DataGen <- function(folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/", 
-                    filename, alpha=0, beta=0.1, gamma=1,
-                    B, C1, relative.cost, G, method){
-  R <- BudgetOpt(B=B, C1=C1, relative.cost=relative.cost, G=G)
+DataGen <- function(folder.data, filename, alpha=100, beta=1, gamma=2,
+                    B=2000, C1=50, relative.cost=5, G=10, method){
+  R <- BudgetOpt(B, C1, relative.cost, G)
     
   # Simulate data
   data <- DataSim(G, R, p.trt, alpha, beta, gamma, sigma, method)
@@ -94,15 +94,21 @@ DataGen <- function(folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/
 #fit hierarchical model
 #method = "poisson" or "normal"
 ModelFit <- function(data.path = "~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv",
-                     true.beta=0.1, method, a=0.05){
+                     true.beta=1, method, a=0.05){
   
   data <- read.csv(data.path)
+  
   
   if(method == "poisson"){
       mdl <- glmer(Y ~ X + (1 | G), data=data, family="poisson")#???
     }
   else{
       mdl <- lmer(Y ~ X + (1 | G), data=data)#???
+      #mdl <- bglmer(Y ~ X + (1 | G), data=data, family = gaussian)#warning
+      
+      # control <- glmerControl(optimizer = "nloptwrap")
+      # mdl <- glmer(Y ~ X + (1 | G), data = data, family = gaussian, control = control)
+      print("hhh")
     }
   
   #mdl <- lmer(Y ~ 1 + X + (1 | G), data=data)#???
@@ -111,25 +117,36 @@ ModelFit <- function(data.path = "~/Documents/GitHub/PHP2550-PDA-project3/Data/s
   #return(est.beta)
   
   #do we need to worry about p-value < or > alpha=0.05???
+  print("0")
   summ <- summary(mdl)
-  p <- summ$coefficients["X", "Pr(>|t|)"]
+  print(summ$coefficients["X", ])
+  
+  print("1")
+  p <- summ$coefficients["X", 4]#dimension problem??? z or t???
   reject.null <- p<=a
   est.beta <- ifelse(reject.null, summ$coefficients["X", "Estimate"], 0)#fixed effect
   
-  ci.lower <- ifelse(reject.null, confint(mdl)["X", "2.5 %"], 0)
-  ci.upper <- ifelse(reject.null, confint(mdl)["X", "97.5 %"], 0)
-  coverage.count <- ifelse(ci.lower <= true.beta & true.beta <= ci.upper, 1, 0)#???
+  # ci.lower <- ifelse(reject.null, confint(mdl)["X", "2.5 %"], 0)
+  # ci.upper <- ifelse(reject.null, confint(mdl)["X", "97.5 %"], 0)
+  # coverage.count <- ifelse(ci.lower <= true.beta & true.beta <= ci.upper, 1, 0)#???error
   
+  print("2")
   se <- summ$coefficients["X", "Std. Error"]#???
+  #print(se)
+  
   
   bias <- est.beta-true.beta#???
+  print("3")
   bias.perc <- ifelse(true.beta!=0, bias/true.beta, NA)#???
+  print("4")
   mse <- bias^2#???
   
-  measure <- c(reject.null, est.beta, coverage.count, se, bias, bias.perc, mse)
+  measure <- c(reject.null, est.beta, se, bias, bias.perc, mse)
   
   #do we need to record the same measures for alpha and gamma???
+  print("5")
   est.alpha <- summ$coefficients["(Intercept)", "Estimate"]#fixed effect
+  print("6")
   est.gamma <- attr(VarCorr(mdl)$G, "stddev")#???
   
   return(measure)
@@ -137,15 +154,16 @@ ModelFit <- function(data.path = "~/Documents/GitHub/PHP2550-PDA-project3/Data/s
 
 
 #make sure C1 > C2
-BudgetOpt <- function(B=1000, C1=2, relative.cost=2, G=10){
+BudgetOpt <- function(B, C1, relative.cost, G){
   C2 <- C1/relative.cost
   #constraint: C1*G + C2*G*(R-1) <= B
   R <- floor(1 + (B-C1*G)/(C2*G))
+  print(R)
   return(R)
 }
 
 #param: C1, relative.cost, G, p.trt???, alpha, beta, gamma, sigma???
-ParamVary <- function(max.iter = 1000, param.ls, param, method,  
+ParamVary <- function(param.ls, param.name, method, max.iter = 2, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/"){
   
@@ -154,12 +172,12 @@ ParamVary <- function(max.iter = 1000, param.ls, param, method,
       
       for(j in 1:max.iter){
         if(j==1){
-          perf.measure <- as.data.frame(matrix(NA, nrow = max.iter, ncol = 7))
-          colnames(perf.measure) <- c("reject.null", "est.beta", "coverage.count", "se", 
+          perf.measure <- as.data.frame(matrix(NA, nrow = max.iter, ncol = 6))
+          colnames(perf.measure) <- c("reject.null", "est.beta", "se", 
                                       "bias", "bias.perc", "mse")
         }
         
-        filename.data = paste0("sim",'_',i,'_',j,'_',param,'_',method)
+        filename.data = paste0("sim",'_',i,'_',j,'_',param.name,'_',method)
         data.path = paste0(folder.data, filename.data, "_data.csv")
           
         if(param=="C1"){
@@ -195,40 +213,46 @@ ParamVary <- function(max.iter = 1000, param.ls, param, method,
           } 
           
           # Create csv file
-          filename.perf = paste0("sim",'_',i,'_',param,'_',method)
+          filename.perf = paste0("sim",'_',i,'_',param.name,'_',method)
           write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)
         }
 
       }
   }
 }
-```
 
-```{r}
-MeasureGen <- function(param.ls, param, folder.perf = "~/Documents/GitHub/PHP2550-PDA-Worksheet11/Perf"){
+MeasureGen <- function(param.ls, param.name, method, folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf"){
 
-  perf.measure.final <- matrix(NA, nrow = length(param.ls), ncol = 8)
-  colnames(perf.measure.final) <- c(param, "reject.rate", "coverage", "avg.se",
+  perf.measure.final <- matrix(NA, nrow = length(param.ls), ncol = 6)
+  colnames(perf.measure.final) <- c(param.name, "reject.rate", "avg.se",
                                     "avg.bias", "avg.bias.perc", "mse")
   perf.measure.final[,1] <- param.ls
   
   for(i in 1:length(param.ls)){
     file.i <- list.files(path = folder.perf,
-                                 pattern = paste0("sim",'_',i,'_',method), 
+                                 pattern = paste0("sim",'_',i,'_',param.name,'_',method), 
                                  full.names = T)  
     file.df <- read.csv(file.i, stringsAsFactors = FALSE, header = TRUE)[, -2]#remove beta.est col
     
     perf.measure.final[i,-1] <- colMeans(file.df, na.rm = T)
   }
-  return(perf.measure.final)
+  #print(perf.measure.final)
+  #return(perf.measure.final)
+  return(knitr::kable(perf.measure.final,
+             digits = 5, caption = paste0("Vary ", param, " & Method is ", method)))
 }
 
-method = "coef"
-param.ls = seq(from=0, to=0.06, by=0.01)
-VaryParam(method = method, param.ls = param.ls)
-knitr::kable(gen_measure(method = method, param.ls = param.ls), 
-              col.names = c("True coefficient", "Rejection rate" , "Coverge probability", "Average SE(x)", "Average bias", "Average percent bias" , "MSE"), align = "c",
-             digits = 5, caption = "Vary True Coefficient")
+method = "normal" 
+param.name = "C1"
+#param.ls = c(2, 6, 10, 20, 50, 80, 100)
+param.ls = c(5, 10, 20, 50, 100, 120)
+ParamVary(param.ls, param.name, method)
+MeasureGen(param.ls, param.name, method)
+```
+
+
+```{r}
+method ="poisson"
 ```
 
 
