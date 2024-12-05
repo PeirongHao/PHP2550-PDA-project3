@@ -15,35 +15,73 @@ execute:
   output: true
 ---
 
-# Introduction
+# Abstract
+
+This simulation project investigates optimal designs for cluster-randomized trials within budgetary limitations. The project examines two data-generating models: normally distributed outcomes and Poisson-distributed outcomes. Hierarchical data are generated with multiple parameters, such as the number of clusters (G), the number of observations per cluster (R), and cluster-level variance (γ²). The simulation attempts to determine an optimal balance between G and R to reduce estimation variability. The comparative costs of sampling new clusters (c1) versus conducting additional measurements within existing clusters (c2) are adjusted to assess their influence on estimates. Models are fitted using linear mixed-effects models for the Normal scenario and generalized linear mixed-effects models for the Poisson scenario, with performance assessed through metrics including the standard deviation of estimates, average of estimates' standard errors, and confidence interval coverage. Results underscore the trade-offs in resource allocation, indicating that an increase in cluster numbers typically enhances precision within fixed budgets. Nonetheless, variability in outcomes considerably increases due to raised cluster-level variance, complicating precise estimation. These findings offer important advice for the design of cost-effective cluster-randomized trials, with practical implications for researchers in the field.
+
+# Simulation Design Using ADEMP Framework
+
+## Aims
+
+We aim to enhance the design of a cluster-randomized trial by accounting for budget constraints and varying parameters. This project explores two data-generating scenarios: Normally distributed outcomes and Poisson-distributed outcomes. The simulation focuses on identifying the optimal combination of the number of clusters ($G$) and the number of observations per cluster ($R$) that minimizes estimation variability within a fixed budget ($B$). Moreover, the study investigates the impact of varying the relative costs of sampling the first observation from a cluster ($c_1$) compared to additional measurements within the same cluster ($c_2$) under the condition that $c_1 > c_2$. The analysis further explores how adjustments to model parameters---such as the intercept ($\alpha$), treatment effect ($\beta$), and cluster-level variance ($\gamma^2$)---influence the treatment effect estimates. Finally, it examines the effect of varying the budget ($B$) on the optimal design.
+
+## Data-Generating Mechanisms
+
+We generate the data using hierarchical models. Observations $j$ range from 1 to $R$, representing measurements within each cluster, while clusters $i$ range from 1 to $G$ (the total number of clusters). In the Normal scenario, treatment assignment ($X_i$) is determined by a Bernoulli distribution with a fixed probability of 0.5, ensuring that approximately half of the clusters are treated while the remainder serve as controls. Observations within the same cluster share a cluster-level mean, modeled as $\mu_i = \alpha + \beta X_i + \epsilon_i$, where $\epsilon_i$ represents the cluster-level deviation and follows a distribution $N(0, \gamma^2)$. Individual-level outcomes are generated as $Y_{ij} = \mu_i + e_{ij}$, where $e_{ij}$ reflects within-cluster variation and is drawn from $N(0, \sigma^2)$. For the Poisson scenario, the cluster-level mean is modeled on the log scale as $\log(\mu_i) = \alpha + \beta X_i + \epsilon_i$, where $\epsilon_i \sim N(0, \gamma^2)$ captures the cluster-level variability. Individual-level outcomes are generated from a Poisson distribution, $Y_{ij} \sim \text{Poisson}(\mu_i)$. Unlike the Normal scenario, there is no $\sigma$ parameter in this case because the Poisson distribution models variability through its mean (variance equal to mean).
+
+## Estimands
+
+The primary estimand is the treatment effect ($\beta$), contributing to the outcome difference between the treatment and control groups. In the Normal scenario, $\beta$ reflects the difference in cluster-level means, while in the Poisson scenario, $\beta$ represents the log-scale difference in cluster-level means between the two groups. Importantly, $\beta$ is an unbiased estimate. The precision of $\beta$ is evaluated using the standard deviation of the estimates and the average standard error of the estimates.
+
+## Methods
+
+The simulation generates hierarchical data using the `DataSim()` function, allowing for variation in parameters such as the number of clusters ($G$), the number of observations per cluster ($R$), and the cluster-level variance ($\gamma^2$). For each set of parameters, two datasets---one based on Normal models and the other on Poisson models---are generated per iteration, with multiple iterations conducted in total to ensure robust evaluation. To optimize the recruitment design, the number of observations per cluster ($R$) is determined using the `BudgetOpt()` function, which incorporates the fixed budget ($B$), the number of clusters (G), and the relative costs of sampling from new clusters ($c_1$) versus collecting additional measurements within existing clusters ($c_2$). Once the data are generated, models are fit using `lmer()` for the Normal scenario and `glmer()` for the Poisson scenario to estimate the treatment effect ($\beta$). Parameter variation, implemented through the `ParamVary()` function, involves systematically adjusting one variable at a time---such as $\beta$, $\gamma$, $c_1$, and $B$---while keeping all other variables constant. Performance metrics, including the standard deviation of the estimated $\beta$, the average of standard errors, and the average number of clusters and observations per cluster, are summarized using the MeasureGen() function. 
+
+All simulated datasets and their corresponding performance metrics are stored as CSV files in specified folders for further evaluation and replication. It is important to note that the $\sigma$ value in the Normal scenario, indication of within-cluster variability, does not affect the estimation of the treatment effect $\beta$. Since $\beta$ reflects the disparity in cluster-level means between the treated and control groups, this disparity is unaffected by the within-cluster noise $\sigma$. Likewise, the intercept parameter $\alpha$ in the Normal setting does not influence the estimation of $\beta$, as it denotes a baseline value that shifts all cluster means, irrespective of treatment status. As a result, $\sigma$ and $\alpha$ can remain constant for the Normal case while other parameters, such as $\beta$, and $\gamma$, are systematically varied.
+
+## Performance Measures
+
+The performance of the study design is assessed through multiple metrics that evaluate the accuracy, precision, and reliability of the estimated treatment effect. The standard deviation of the estimated \beta quantifies the variability of the estimates across iterations. The mean of the standard errors of estimates is calculated to describe the expected uncertainty in the treatment effect for a single dataset. The simulation also tracks the average number of clusters and observations per cluster, offering insights into resource allocation within the specified budgetary limitations. The 95% confidence interval coverage probability for \beta is assessed to ascertain if the intervals consistently capture the true treatment effect.???
 
 ```{r}
-#simulation
+#| label: setup
+#| include: false
+
 set.seed(123456)
+library(dplyr)
+library(ggplot2)
 library(purrr)
 library(lme4)
 library(lmerTest)
-library(blme)
-library(Rlab)#??? might not need
 
+library(brms)
+library(blme)
+
+library(Rlab)#!!! might not need
+```
+
+```{r}
 #data generation
 #G clusters, each cluster has R members
 #clusters are independent
 #members in each cluster share same cluster mean (correlated)
-DataSim <- function(G, R, p.trt=0.5, alpha, beta, gamma, sigma=1, method){
+DataSim <- function(G, R, alpha, beta, gamma, method, sigma=0.5, p.trt=0.5){
   data <-data.frame(matrix(ncol = 7, nrow = G*R))
   colnames(data) <- c('G', 'R', 'X', 'Y', 'alpha', 'beta', 'gamma')
   # data[,"G"] <- rep(1:G, each=R)
   # data[,"R"] <- rep(1:R, G)
   
   # Generate X: 0 for ctrl, 1 for trt
-  x <- rbern(n=G, prob=p.trt)
+  #x <- rbern(n=G, prob=p.trt)#not use it because sometimes all xs are 0
+  x <- c(rep(0, floor(G / 2)), rep(1, ceiling(G / 2)))
+  x <- sample(x)
+  
   mu.0 <- alpha + beta * x
   
-  epsilon <- rnorm(n=G, mean=0, sd=gamma)
+  epsilon <- rnorm(G, mean=0, sd=gamma)
   mu <- mu.0 + epsilon
   if(method == "poisson"){
-      mu <- exp(mu)#???
+      mu <- exp(mu)
     }
   #mu <- ifelse(method=="poisson", exp(mu.0 + epsilon), mu.0 + epsilon)
   
@@ -51,7 +89,7 @@ DataSim <- function(G, R, p.trt=0.5, alpha, beta, gamma, sigma=1, method){
     if(method == "poisson"){
       y <- rpois(R, lambda = mu[i]) 
     }
-    else{
+    else{#normal
       eps <- rnorm(n=R, mean=0, sd=sigma)
       y <- mu[i] + eps
     }
@@ -65,196 +103,525 @@ DataSim <- function(G, R, p.trt=0.5, alpha, beta, gamma, sigma=1, method){
   return(data)
 }
 
+#modify!!!
 #alpha refers to intercept
 #method = "poisson" or "normal"
-DataGen <- function(folder.data, filename, alpha=100, beta=1, gamma=2,
-                    B=2000, C1=50, relative.cost=5, G=10, method){
-  R <- BudgetOpt(B, C1, relative.cost, G)
-    
-  # Simulate data
-  data <- DataSim(G, R, p.trt, alpha, beta, gamma, sigma, method)
-  
+DataGen <- function(folder.data, filename, alpha, beta, gamma, B, C1, relative.cost, method){
   # Create data folder
   if (!dir.exists(folder.data)) {  # Check if the folder already exists
-    dir.create(folder.data)
-  } 
+      dir.create(folder.data)} 
   
-  # Create csv file
-  write.csv(data, paste0(folder.data, filename, "_data.csv"), row.names=FALSE)
+  B.Opt <- BudgetOpt(B, C1, relative.cost)
+  R <- B.Opt$R
+  G <- B.Opt$G
+  
+  for(k in 1:length(G)){
+    # Simulate data
+    data <- DataSim(G[k], R[k], alpha, beta, gamma, method)
+    
+    # Create csv file
+    write.csv(data, paste0(folder.data, filename,'_',G[k],'_',R[k],"_data.csv"), row.names=FALSE)
+  }
+  return(B.Opt)
 }
 
-
-# #test data generation
+# ##########################################test data generation
+# #method="normal"
+# method="poisson"
 # for(i in 1:2){
-#   DataGen(filename = paste0("sim",'_',i))
+#   DataGen(folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
+#           filename = paste0("sim",'_',i,'_',method), method = method)
 # }
-# read.csv("~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv")
-
+# #test1<-read.csv("~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv")
+# 
+# #method="normal"
+# method="poisson"
+# folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/"
+# filename.data = paste0("sim",'_',i,'_',method)
+# data.path = paste0(folder.data, filename.data, "_data.csv")
+# #ModelFit(data.path, method=method)
+# ##########################################test data generation
 
 #fit hierarchical model
 #method = "poisson" or "normal"
-ModelFit <- function(data.path = "~/Documents/GitHub/PHP2550-PDA-project3/Data/sim_1_data.csv",
-                     true.beta=1, method, a=0.05){
+ModelFit <- function(data.path, method, true.beta=0.5){
   
   data <- read.csv(data.path)
   
-  
   if(method == "poisson"){
-      mdl <- glmer(Y ~ X + (1 | G), data=data, family="poisson")#???
+      mdl <- glmer(Y ~ X + (1 | G), data=data, family="poisson")
     }
   else{
-      mdl <- lmer(Y ~ X + (1 | G), data=data)#???
-      #mdl <- bglmer(Y ~ X + (1 | G), data=data, family = gaussian)#warning
-      
-      # control <- glmerControl(optimizer = "nloptwrap")
-      # mdl <- glmer(Y ~ X + (1 | G), data = data, family = gaussian, control = control)
-      print("hhh")
+      mdl <- lmer(Y ~ X + (1 | G), data=data, control = lmerControl(optimizer = "Nelder_Mead"))
     }
   
-  #mdl <- lmer(Y ~ 1 + X + (1 | G), data=data)#???
-  #ranef(mdl)
-  #est.beta <- fixef(mdl)["X"]
-  #return(est.beta)
-  
-  #do we need to worry about p-value < or > alpha=0.05???
-  print("0")
+  #do not need to worry about p-value < or > alpha=0.05
+  #do not need coverage, i.e. 95% CI
   summ <- summary(mdl)
-  print(summ$coefficients["X", ])
-  
-  print("1")
-  p <- summ$coefficients["X", 4]#dimension problem??? z or t???
-  reject.null <- p<=a
-  est.beta <- ifelse(reject.null, summ$coefficients["X", "Estimate"], 0)#fixed effect
-  
-  # ci.lower <- ifelse(reject.null, confint(mdl)["X", "2.5 %"], 0)
-  # ci.upper <- ifelse(reject.null, confint(mdl)["X", "97.5 %"], 0)
-  # coverage.count <- ifelse(ci.lower <= true.beta & true.beta <= ci.upper, 1, 0)#???error
-  
-  print("2")
-  se <- summ$coefficients["X", "Std. Error"]#???
-  #print(se)
-  
-  
-  bias <- est.beta-true.beta#???
-  print("3")
-  bias.perc <- ifelse(true.beta!=0, bias/true.beta, NA)#???
-  print("4")
-  mse <- bias^2#???
-  
-  measure <- c(reject.null, est.beta, se, bias, bias.perc, mse)
-  
-  #do we need to record the same measures for alpha and gamma???
-  print("5")
-  est.alpha <- summ$coefficients["(Intercept)", "Estimate"]#fixed effect
-  print("6")
-  est.gamma <- attr(VarCorr(mdl)$G, "stddev")#???
-  
+  est.beta <- summ$coefficients["X", "Estimate"]
+  se <- summ$coefficients["X", "Std. Error"]
+
+  measure <- c(est.beta, se)
   return(measure)
 }
 
 
+#constraint: G>=4, R>=2 to maintain hierarchical order, o/w error occurs when fitting model
 #make sure C1 > C2
-BudgetOpt <- function(B, C1, relative.cost, G){
+BudgetOpt <- function(B, C1, relative.cost){
   C2 <- C1/relative.cost
+  G.min <- 4
+  R.min <- 2
+  B.remain <- B-G.min*C1-(R.min-1)*C2 #remaining budget after satisfying the minimum requirement for G,R
+  G.max <- floor(B.remain/(C1+R.min*C2))+G.min 
+  #each new cluster has to at least two observation, max.num = potential (integer) + min.num
+  
+  G.all <- G.min:G.max
+  R.all <- sapply(G.all, GetR, B=B, C1=C1, C2=C2)#find the corresponding R for each G
+  indices <- which(R.all >= R.min)#have to satisfy this requirement
+  
+  G.final <- G.all[indices]
+  R.final <- R.all[indices]
+
+  return(list(G=G.final, R=R.final))
+}
+
+GetR <- function(G, B, C1, C2){
   #constraint: C1*G + C2*G*(R-1) <= B
   R <- floor(1 + (B-C1*G)/(C2*G))
-  print(R)
   return(R)
 }
 
-#param: C1, relative.cost, G, p.trt???, alpha, beta, gamma, sigma???
+#param: C1, relative.cost, G, beta, gamma, (change alpha only for poisson case)
+#do not change p.trt, sigma
+#could change B as well
 ParamVary <- function(param.ls, param.name, method, max.iter = 2, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
-                      folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/"){
+                      folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/",
+                      C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=2000){
+  # Create performance folder
+  if (!dir.exists(folder.perf)) {  # Check if the folder already exists
+            dir.create(folder.perf)} 
   
   for(i in 1:length(param.ls)){
       param = param.ls[i]
       
       for(j in 1:max.iter){
-        if(j==1){
-          perf.measure <- as.data.frame(matrix(NA, nrow = max.iter, ncol = 6))
-          colnames(perf.measure) <- c("reject.null", "est.beta", "se", 
-                                      "bias", "bias.perc", "mse")
+          
+        if(param.name=="C1"){
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, C1=param, method=method,
+                  relative.cost=relative.cost, alpha=alpha, beta=beta, gamma=gamma, B=B)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
+          
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
         
-        filename.data = paste0("sim",'_',i,'_',j,'_',param.name,'_',method)
-        data.path = paste0(folder.data, filename.data, "_data.csv")
+        else if(param.name=="relative.cost"){
+          # DataGen(folder.data, filename.data, relative.cost=param, method=method,
+          #         C1=C1, G=G, alpha=alpha, beta=beta, gamma=gamma, B=B)
+          # perf.measure[j,] <- ModelFit(data.path, method=method)
           
-        if(param=="C1"){
-          DataGen(folder.data, filename.data, C1=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, method=method)
-        }
-        else if(param=="relative.cost"){
-          DataGen(folder.data, filename.data, relative.cost=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, method=method)
-        }
-        else if(param=="G"){
-          DataGen(folder.data, filename.data, G=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, method=method)
-        }
-        else if(param=="alpha"){
-          DataGen(folder.data, filename.data, alpha=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, method=method)
-        }
-        else if(param=="beta"){
-          DataGen(folder.data, filename.data, beta=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, true.beta=param, method=method)
-        }
-        else{#param = "gamma"
-          DataGen(folder.data, filename.data, gamma=param, method=method)
-          perf.measure[j,] <- ModelFit(data.path, method=method)
-        }
-        
-        if(j==max.iter){
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, relative.cost=param, method=method,
+                  C1=C1, alpha=alpha, beta=beta, gamma=gamma, B=B)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
           
-          # Create performance folder
-          if (!dir.exists(folder.perf)) {  # Check if the folder already exists
-            dir.create(folder.perf)
-          } 
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
+        }
+        else if(param.name=="alpha"){
+          # DataGen(folder.data, filename.data, alpha=param, method=method,
+          #         relative.cost=relative.cost, G=G, C1=C1, beta=beta, gamma=gamma, B=B)
+          # perf.measure[j,] <- ModelFit(data.path, method=method)
           
-          # Create csv file
-          filename.perf = paste0("sim",'_',i,'_',param.name,'_',method)
-          write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, alpha=param, method=method,
+                  relative.cost=relative.cost, C1=C1, beta=beta, gamma=gamma, B=B)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
+          
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
+          
+        }
+        else if(param.name=="beta"){
+          # DataGen(folder.data, filename.data, beta=param, method=method,
+          #         relative.cost=relative.cost, G=G, alpha=alpha, C1=C1, gamma=gamma, B=B)
+          # perf.measure[j,] <- ModelFit(data.path, true.beta=param, method=method)
+          
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, beta=param, method=method,
+                  relative.cost=relative.cost, alpha=alpha, C1=C1, gamma=gamma, B=B)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
+          
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
+        }
+        else if(param.name=="gamma"){
+          # DataGen(folder.data, filename.data, gamma=param, method=method,
+          #         relative.cost=relative.cost, G=G, alpha=alpha, beta=beta, C1=C1, B=B)
+          # perf.measure[j,] <- ModelFit(data.path, method=method)
+          
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, gamma=param, method=method,
+                  relative.cost=relative.cost, alpha=alpha, beta=beta, C1=C1, B=B)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
+          
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)
+            }
+        }
+        else if(param.name=="B"){
+          # DataGen(folder.data, filename.data, B=param, method=method,
+          #         relative.cost=relative.cost, G=G, alpha=alpha, beta=beta, gamma=gamma, C1=C1)
+          # perf.measure[j,] <- ModelFit(data.path, method=method)
+          
+          filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
+          B.Opt <- DataGen(folder.data, filename.data, B=param, method=method,
+                  relative.cost=relative.cost, alpha=alpha, beta=beta, gamma=gamma, C1=C1)
+          R <- B.Opt$R
+          G <- B.Opt$G
+          K <- length(G)
+          
+          if(j==1){
+            perf.measure <- data.frame(matrix(ncol = 4, nrow = max.iter*K))
+            colnames(perf.measure) <- c("est.beta", "se", "G", "R")
+            }
+            
+          for(k in 1:K){
+            #print(k)
+            filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
+            data.path = paste0(folder.data, filename.data, "_data.csv")
+            measure <- ModelFit(data.path, method=method)
+            
+            row.num <- j*K-(K-k)
+            perf.measure[row.num, ] <- c(measure[1], measure[2], G[k], R[k])
+            }
+            
+          if(j==max.iter){
+            # Create csv file
+            filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
+            write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
 
       }
   }
 }
 
-MeasureGen <- function(param.ls, param.name, method, folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf"){
+MeasureGen <- function(param.ls, param.name, method, 
+                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf"){
 
-  perf.measure.final <- matrix(NA, nrow = length(param.ls), ncol = 6)
-  colnames(perf.measure.final) <- c(param.name, "reject.rate", "avg.se",
-                                    "avg.bias", "avg.bias.perc", "mse")
-  perf.measure.final[,1] <- param.ls
+  # perf.measure.final <- matrix(NA, nrow = length(param.ls), ncol = 5)
+  # colnames(perf.measure.final) <- c(param.name, "sd.est.beta", "avg.se", "G", "R")
+  # perf.measure.final[,1] <- param.ls
   
-  for(i in 1:length(param.ls)){
+  param.len <- length(param.ls)
+  #result.ls <- vector("list", 4*param.len)
+  #Each param is associated with one table and three plots
+  result.ls <- vector("list", param.len)
+  
+  for(i in 1:param.len){
+    param = param.ls[i]
     file.i <- list.files(path = folder.perf,
-                                 pattern = paste0("sim",'_',i,'_',param.name,'_',method), 
+                                 pattern = paste0("sim",'_',method,'_',param.name,'_',param), 
                                  full.names = T)  
-    file.df <- read.csv(file.i, stringsAsFactors = FALSE, header = TRUE)[, -2]#remove beta.est col
+    file.df <- read.csv(file.i, stringsAsFactors = FALSE, header = TRUE)
     
-    perf.measure.final[i,-1] <- colMeans(file.df, na.rm = T)
+    #for(j in 1:4){
+      # idx <- (i-1)*4+j
+      # if(j==1){
+        tbl <- file.df %>%
+          group_by(G, R) %>%
+          summarise(
+            Var_Beta_Est = var(est.beta, na.rm = TRUE),  
+            Mean_SE_Sq = (mean(se, na.rm = TRUE))^2,
+            .groups = "drop")
+      
+        result.ls[[i]] <- tbl
+      #}
+      # else{
+      #   if(j==2){
+      #     plot1 <- ggplot(tbl, aes(x = G, y = R)) +
+      #                 geom_bar(stat = "identity", fill = "lightgreen") +
+      #                 labs(title = "Recruitment Options",
+      #                   x = "G", y = "R") + theme_minimal()
+      #     result.ls[[idx]] <- plot1
+      #   }
+      #   else if(j==2){
+      #       plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est)) +
+      #                   geom_bar(stat = "identity", fill = "skyblue") +
+      #                   labs(
+      #                     title = "Variance of Beta Estimates",
+      #                     x = "G", y = "Variance of Beta Estimates") + theme_minimal()
+      #       result.ls[[idx]] <- plot2
+      #   }
+      #   else if(j==2){
+      #       plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq)) +
+      #                   geom_bar(stat = "identity", fill = "purple") +
+      #                   labs(
+      #                     title = "Mean SE Squared",
+      #                     x = "G", y = "Mean SE Squared") + theme_minimal()
+      #       result.ls[[idx]] <- plot3
+      #   }
+      #}
+      
+    #}
+
+    #perf.measure.final[i,-1] <- c(sd(file.df[,1]), colMeans(file.df[,-1], na.rm = T))
   }
   #print(perf.measure.final)
   #return(perf.measure.final)
-  return(knitr::kable(perf.measure.final,
-             digits = 5, caption = paste0("Vary ", param, " & Method is ", method)))
+  # return(knitr::kable(perf.measure.final,
+  #            digits = 5, caption = paste0("Vary ", param, " & Method is ", method)))
+  return(result.ls)
 }
-
-method = "normal" 
-param.name = "C1"
-#param.ls = c(2, 6, 10, 20, 50, 80, 100)
-param.ls = c(5, 10, 20, 50, 100, 120)
-ParamVary(param.ls, param.name, method)
-MeasureGen(param.ls, param.name, method)
 ```
-
 
 ```{r}
+#3 common problems:
+#boundary (singular) fit: see help('isSingular')
+
+#Error: no more error handlers available (recursive errors?); invoking 'abort' restart
+
+#Warning: type 29 is unimplemented in 'type2char'Error in data.frame(rbind(c("algorithm", "character", paste("NLOPT_GN_DIRECT",  : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+
+#Error in DataSim(G, R, alpha, beta, gamma, method) : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
+
+#Show in New Window, Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+
+#Warning: Model failed to converge with max|grad| = 0.218378 (tol = 0.002, component 1)fixed-effect model matrix is rank deficient so dropping 1 column / coefficient fixed-effect model matrix is rank deficient so dropping 1 column / coefficient Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+
+#Error: no more error handlers available (recursive errors?); invoking 'abort' restart Warning: type 29 is unimplemented in 'type2char'Error in stopifnot(length(class2) == 1L) : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
+
+method = "normal"
+param.name = "C1"
+#param.ls = c(6,10,12,16,20)
+#param.ls = c(10,20,30,40,50)
+#param.ls = c(10,15,20,25,30)
+param.ls = c(10,12)
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+
 method ="poisson"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
 ```
 
+```{r}
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+param.name = "relative.cost"
+#param.ls = c(2, 4, 5, 10, 20)
+param.ls = c(5, 10)
+
+method = "normal"
+ParamVary(param.ls, param.name, method)
+result.ls <- MeasureGen(param.ls, param.name, method)
+
+method ="poisson"
+ParamVary(param.ls, param.name, method)
+result.ls <- MeasureGen(param.ls, param.name, method)
+```
+
+```{r}
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+# param.name = "G"
+# param.ls = c(10,11,12,13,14,15)
+# 
+# method = "normal"
+# ParamVary(param.ls, param.name, method)
+# MeasureGen(param.ls, param.name, method)
+# 
+# method ="poisson"
+# ParamVary(param.ls, param.name, method)
+# MeasureGen(param.ls, param.name, method)
+```
+
+```{r}
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+param.name = "alpha"
+#param.ls = c(1,3,5,7,9)
+param.ls = c(1,2,3,4,5)
+
+# method = "normal"#should not matter
+# ParamVary(param.ls, param.name, method,
+#           relative.cost=2, G=50, C1=20, beta=2, gamma=1, B=5000)
+# MeasureGen(param.ls, param.name, method)
+
+method ="poisson"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, beta=2, gamma=1, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+```
+
+```{r}
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+
+#Warning: convergence code 3 from bobyqa: bobyqa -- a trust region step failed to reduce q
+
+#fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+
+param.name = "beta"
+#param.ls = c(0.1, 0.5, 1, 3, 5)
+param.ls = c(1,2,3,4,5)
+
+method = "normal"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+
+method ="poisson"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+```
+
+```{r}
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+param.name = "gamma"
+#param.ls = c(0.5, 1, 2, 3, 4, 5)
+#param.ls = c(1, 1.5, 2, 2.5, 3)
+param.ls = c(2,3)
+method = "normal"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=10, alpha=5, beta=3, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+
+method ="poisson"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=10, alpha=5, beta=3, B=5000)
+result.ls <- MeasureGen(param.ls, param.name, method)
+```
+
+```{r}
+#fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
+#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
+param.name = "B"
+#param.ls = c(1000, 1500, 2000, 2500, 3000)
+#param.ls = c(3000, 3500, 4000)
+param.ls = c(4000, 5000)
+
+method = "normal"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
+result.ls <- MeasureGen(param.ls, param.name, method)
+
+method ="poisson"
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
+result.ls <- MeasureGen(param.ls, param.name, method)
+```
+
+# Analysis and Results
+
+The simulation analysis assessed the performance of different trial designs by altering parameters such as C_1 (cost per cluster), GGG (number of clusters), and the overall budget (BBB). The results for Normal outcomes indicated that increasing GGG while sustaining a controllable RRR enhanced the accuracy of treatment effect estimates, as reflected by decreases in sd(β^)sd(\hat{\beta})sd(β^). Comparable trends were found for the Poisson outcomes; however, the variance in the estimates was typically greater.
+As the relative cost of additional observations (c2) decreased in comparison to (c1), the allocation transitioned towards fewer clusters with more observations per cluster, leading to a slight reduction in precision in high-variance situations. Moreover, increased budgets facilitated the inclusion of additional clusters and repeated measures in each cluster, thus diminishing standard errors and enhancing coverage probabilities. In situations with a larger γ2, adding the number of clusters yielded diminishing returns, underscoring the necessity of balancing cluster-level and within-cluster variability in trial design.
+These findings highlight the necessity of adjusting trial designs to the specific variance structures and financial constraints of the study context. The trade-offs between cluster size and intra-cluster metrics provide practical insights for real-world applications.
+
+# Limitations
+
+The simulation offers valuable insights into the design of cluster-randomized trials, yet several limitations need consideration. The models presuppose simplistic hierarchical frameworks characterized by independent clusters and normally distributed random effects. However, the reality is often more complex, with clusters demonstrating additional dependencies or non-normative behavior. This complexity challenges us to develop more sophisticated models that can accurately capture these nuances, thereby improving the generalizability of the findings. Utilizing a singular optimizer (Nelder_Mead) for model fitting may restrict convergence for specific parameter configurations, resulting in biased or incomplete estimates. Additionally, the analysis fails to account for potential missing data or imbalances in treatment assignments, which are prevalent in practical trials.
+
+The generated datasets represent idealized conditions without measurement error or unmeasured confounding, potentially oversimplifying real-world complexities. Moreover, the presumed cost structures (c1 > c2) may not correspond with particular resource limitations or operational realities in various trial environments. However, these limitations present exciting opportunities for future research to integrate more intricate hierarchical structures, data irregularities, and diverse cost models, thereby improving the generality of the results and advancing our understanding of cluster-randomized trials.
 
 \newpage
 
