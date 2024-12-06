@@ -50,6 +50,8 @@ The performance of the study design is assessed through multiple metrics that ev
 set.seed(123456)
 library(dplyr)
 library(ggplot2)
+library(gridExtra)
+library(grid)
 library(purrr)
 library(lme4)
 library(lmerTest)
@@ -195,10 +197,10 @@ GetR <- function(G, B, C1, C2){
 #param: C1, relative.cost, beta, gamma, (change alpha only for poisson case)
 #do not change p.trt, sigma
 #could change B as well
-ParamVary <- function(param.ls, param.name, method, max.iter = 3, 
+ParamVary <- function(param.ls, param.name, method, max.iter = 20, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/",
-                      C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=2000){
+                      C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=5000){
   # Create performance folder
   if (!dir.exists(folder.perf)) {  # Check if the folder already exists
             dir.create(folder.perf)} 
@@ -494,16 +496,72 @@ method = "normal"
 param.name = "C1"
 #param.ls = c(6,10,12,16,20)
 #param.ls = c(10,20,30,40,50)
-param.ls = c(10,15,20,25,30)
-#param.ls = c(10,12)
+#param.ls = c(10,15,20,25,30)
+param.ls = c(10,20,30)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
 result.C1.normal <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.C1.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
 result.C1.poisson <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.C1.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 ```{r}
@@ -517,41 +575,141 @@ ParamVary(param.ls, param.name, method,
           C1=20, alpha=5, beta=3, gamma=2, B=5000)
 result.rc.normal <- MeasureGen(param.ls, param.name, method)
 
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.rc.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
+
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           C1=20, alpha=5, beta=3, gamma=2, B=5000)
 result.rc.poisson <- MeasureGen(param.ls, param.name, method)
-```
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.rc.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
 
-```{r}
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-# param.name = "G"
-# param.ls = c(10,11,12,13,14,15)
-# 
-# method = "normal"
-# ParamVary(param.ls, param.name, method)
-# MeasureGen(param.ls, param.name, method)
-# 
-# method ="poisson"
-# ParamVary(param.ls, param.name, method)
-# MeasureGen(param.ls, param.name, method)
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 ```{r}
 #Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "alpha"
 #param.ls = c(1,3,5,7,9)
-param.ls = c(1,2,3,4,5)
+#param.ls = c(1,2,3,4,5)
+param.ls = c(5,6,7)
 
-# method = "normal"#should not matter
-# ParamVary(param.ls, param.name, method,
-#           relative.cost=2, G=50, C1=20, beta=2, gamma=1, B=5000)
-# MeasureGen(param.ls, param.name, method)
+method = "normal"#should not matter
+ParamVary(param.ls, param.name, method,
+          relative.cost=2, C1=20, beta=3, gamma=2, B=5000)
+result.alpha.normal <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.alpha.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 
 method ="poisson"
+# ParamVary(param.ls, param.name, method,
+#           relative.cost=2, C1=20, beta=2, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=20, beta=2, gamma=1, B=5000)
+          relative.cost=2, C1=20, beta=3, gamma=2, B=5000)
 result.alpha.poisson <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.alpha.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 ```{r}
@@ -567,14 +725,74 @@ param.name = "beta"
 param.ls = c(1,2,3,4,5)
 
 method = "normal"
+# ParamVary(param.ls, param.name, method,
+#           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
+          relative.cost=2, C1=20, alpha=5, gamma=2, B=5000)
 result.beta.normal <- MeasureGen(param.ls, param.name, method)
 
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.beta.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
+
 method ="poisson"
+# ParamVary(param.ls, param.name, method,
+#           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
+           relative.cost=2, C1=20, alpha=5, gamma=2, B=5000)
 result.beta.poisson <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.beta.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 ```{r}
@@ -590,10 +808,66 @@ ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
 result.gamma.normal <- MeasureGen(param.ls, param.name, method)
 
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.gamma.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
+
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
 result.gamma.poisson <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.gamma.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 ```{r}
@@ -605,14 +879,72 @@ param.name = "B"
 param.ls = c(3000, 4000, 5000)
 
 method = "normal"
+# ParamVary(param.ls, param.name, method,
+#           relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
+          relative.cost=2, C1=20, alpha=5, beta=3, gamma=2)
 result.B.normal <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.B.normal[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
+          relative.cost=2, C1=20, alpha=5, beta=3, gamma=2)
 result.B.poisson <- MeasureGen(param.ls, param.name, method)
+
+for(i in 1:length(param.ls)){
+  param = param.ls[i]
+  tbl <- result.B.poisson[[i]]
+  
+  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+              geom_line(color = "lightgreen", linewidth = 1) + 
+              geom_point(color = "lightgreen", size = 2) +  
+              labs(title = "Recruitment Options", x = "G", y = "R") +
+              theme_minimal() + ylim(0, 700)
+  
+  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+              geom_line(color = "skyblue", linewidth = 1) +  
+              geom_point(color = "skyblue", size = 2) +  
+              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+              theme_minimal() + ylim(0, 15)
+              
+  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
+              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+              theme_minimal() + ylim(0, 10)
+  
+  header <- textGrob(paste0(method,', ',param.name,'=',param), 
+                     gp = gpar(fontsize = 16, fontface = "bold"))
+
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+}
 ```
 
 # Analysis and Results
