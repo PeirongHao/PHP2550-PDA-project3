@@ -192,10 +192,10 @@ GetR <- function(G, B, C1, C2){
   return(R)
 }
 
-#param: C1, relative.cost, G, beta, gamma, (change alpha only for poisson case)
+#param: C1, relative.cost, beta, gamma, (change alpha only for poisson case)
 #do not change p.trt, sigma
 #could change B as well
-ParamVary <- function(param.ls, param.name, method, max.iter = 2, 
+ParamVary <- function(param.ls, param.name, method, max.iter = 3, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/",
                       C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=2000){
@@ -494,31 +494,33 @@ method = "normal"
 param.name = "C1"
 #param.ls = c(6,10,12,16,20)
 #param.ls = c(10,20,30,40,50)
-#param.ls = c(10,15,20,25,30)
-param.ls = c(10,12)
+param.ls = c(10,15,20,25,30)
+#param.ls = c(10,12)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.C1.normal <- MeasureGen(param.ls, param.name, method)
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.C1.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 ```{r}
 #Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "relative.cost"
-#param.ls = c(2, 4, 5, 10, 20)
-param.ls = c(5, 10)
+param.ls = c(4, 5, 10)
+#param.ls = c(5, 10)
 
 method = "normal"
-ParamVary(param.ls, param.name, method)
-result.ls <- MeasureGen(param.ls, param.name, method)
+ParamVary(param.ls, param.name, method,
+          C1=20, alpha=5, beta=3, gamma=2, B=5000)
+result.rc.normal <- MeasureGen(param.ls, param.name, method)
 
 method ="poisson"
-ParamVary(param.ls, param.name, method)
-result.ls <- MeasureGen(param.ls, param.name, method)
+ParamVary(param.ls, param.name, method,
+          C1=20, alpha=5, beta=3, gamma=2, B=5000)
+result.rc.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 ```{r}
@@ -549,7 +551,7 @@ param.ls = c(1,2,3,4,5)
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, beta=2, gamma=1, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.alpha.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 ```{r}
@@ -567,29 +569,31 @@ param.ls = c(1,2,3,4,5)
 method = "normal"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.beta.normal <- MeasureGen(param.ls, param.name, method)
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.beta.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 ```{r}
 #Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "gamma"
 #param.ls = c(0.5, 1, 2, 3, 4, 5)
-#param.ls = c(1, 1.5, 2, 2.5, 3)
-param.ls = c(2,3)
+#param.ls = c(2, 2.5, 3)
+#param.ls = c(2,3)
+param.ls = c(1,2,3)
+#param.ls = c(1, 1.5, 2)
 method = "normal"
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=10, alpha=5, beta=3, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+          relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
+result.gamma.normal <- MeasureGen(param.ls, param.name, method)
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
-          relative.cost=2, C1=10, alpha=5, beta=3, B=5000)
-result.ls <- MeasureGen(param.ls, param.name, method)
+          relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
+result.gamma.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 ```{r}
@@ -598,17 +602,17 @@ result.ls <- MeasureGen(param.ls, param.name, method)
 param.name = "B"
 #param.ls = c(1000, 1500, 2000, 2500, 3000)
 #param.ls = c(3000, 3500, 4000)
-param.ls = c(4000, 5000)
+param.ls = c(3000, 4000, 5000)
 
 method = "normal"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.B.normal <- MeasureGen(param.ls, param.name, method)
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
-result.ls <- MeasureGen(param.ls, param.name, method)
+result.B.poisson <- MeasureGen(param.ls, param.name, method)
 ```
 
 # Analysis and Results
