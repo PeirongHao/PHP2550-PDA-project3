@@ -18,7 +18,7 @@ execute:
 
 # Abstract
 
-This simulation project investigates optimal recruitment designs for cluster-randomized trials within budgetary limitations. The project examines two data-generating models: normally distributed outcomes and poisson-distributed outcomes. Hierarchical data are generated with multiple parameters, such as the number of clusters ($G$), the number of observations per cluster ($R$), and cluster-level variance ($\gamma^2$). The simulation attempts to determine an optimal balance between $G$ and $R$ to reduce estimation variability. The comparative costs of sampling new clusters ($c_1$) versus conducting additional measurements within existing clusters ($c_2$) are adjusted to assess their influence on estimates. Models are fitted using linear mixed-effects models for the normal scenario and generalized linear mixed-effects models for the poisson scenario, with performance assessed through metrics including the variance of estimates and average of estimates' standard errors. Results demonstrate that increasing the number of clusters generally improves precision within fixed budgets, but high cluster-level variance complicates estimation. Furthermore, the increased cluster-level variance amplifies variability in outcomes, making estimation more challenging. These findings provide practical guidance for researchers designing cost-effective cluster-randomized trials.
+This simulation project investigates optimal recruitment designs for cluster-randomized trials within budgetary limitations. The project examines two data-generating models: normally distributed outcomes and poisson-distributed outcomes. Hierarchical data are generated with multiple parameters, such as the number of clusters ($G$), the number of observations per cluster ($R$), and cluster-level variance ($\gamma^2$). The simulation attempts to determine an optimal balance between $G$ and $R$ to reduce estimation variability. The comparative costs of sampling new clusters ($C_1$) versus conducting additional measurements within existing clusters ($C_2$) are adjusted to assess their influence on estimates. Models are fitted using linear mixed-effects models for the normal scenario and generalized linear mixed-effects models for the poisson scenario, with performance assessed through metrics including the variance of estimates and average of estimates' standard errors. Results indicate that increasing the number of clusters ($G$) improves precision within specified budgets. Higher budgets enable the inclusion of more clusters in both models; however, the normal model emphasizes increasing $R$, while the Poisson model prioritizes $G$. Larger $\beta$ values enhance estimate stability, while higher $\gamma^2$ amplifies variability, particularly in the Poisson model. As $C_1$ (cost per new cluster) increases, $G$ decreases, and higher relative cost ratios ($C_1/C_2$) make collecting additional observations within existing clusters more economical. Overall, the normal model exhibits greater stability than the Poisson model. These findings provide practical guidance for researchers designing cost-effective cluster-randomized trials.
 
 # Simulation Design Using ADEMP Framework
 
@@ -50,17 +50,14 @@ The performance of the study design is assessed through multiple metrics that ev
 
 set.seed(123456)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 library(gridExtra)
 library(grid)
 library(purrr)
 library(lme4)
-library(lmerTest)
-
-library(brms)
-library(blme)
-
-library(Rlab)#!!! might not need
+library(knitr)
+library(Rlab)
 ```
 
 ```{r}
@@ -106,12 +103,10 @@ DataSim <- function(G, R, alpha, beta, gamma, method, sigma=0.5, p.trt=0.5){
   return(data)
 }
 
-#modify!!!
 #alpha refers to intercept
 #method = "poisson" or "normal"
 DataGen <- function(folder.data, filename, alpha, beta, gamma, B, C1, relative.cost, method){
-  # Create data folder
-  if (!dir.exists(folder.data)) {  # Check if the folder already exists
+  if (!dir.exists(folder.data)) {  
       dir.create(folder.data)} 
   
   B.Opt <- BudgetOpt(B, C1, relative.cost)
@@ -119,10 +114,8 @@ DataGen <- function(folder.data, filename, alpha, beta, gamma, B, C1, relative.c
   G <- B.Opt$G
   
   for(k in 1:length(G)){
-    # Simulate data
+    # simulate data
     data <- DataSim(G[k], R[k], alpha, beta, gamma, method)
-    
-    # Create csv file
     write.csv(data, paste0(folder.data, filename,'_',G[k],'_',R[k],"_data.csv"), row.names=FALSE)
   }
   return(B.Opt)
@@ -195,15 +188,15 @@ GetR <- function(G, B, C1, C2){
   return(R)
 }
 
-#param: C1, relative.cost, beta, gamma, (change alpha only for poisson case)
+#param: C1, relative.cost, beta, gamma, (change alpha mainly for poisson case)
 #do not change p.trt, sigma
 #could change B as well
 ParamVary <- function(param.ls, param.name, method, max.iter = 5, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/",
                       C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=5000){
-  # Create performance folder
-  if (!dir.exists(folder.perf)) {  # Check if the folder already exists
+
+  if (!dir.exists(folder.perf)) {  
             dir.create(folder.perf)} 
   
   for(i in 1:length(param.ls)){
@@ -225,7 +218,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -235,15 +227,11 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           if(j==max.iter){
-            # Create csv file
             filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
             write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
         
         else if(param.name=="relative.cost"){
-          # DataGen(folder.data, filename.data, relative.cost=param, method=method,
-          #         C1=C1, G=G, alpha=alpha, beta=beta, gamma=gamma, B=B)
-          # perf.measure[j,] <- ModelFit(data.path, method=method)
           
           filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
           B.Opt <- DataGen(folder.data, filename.data, relative.cost=param, method=method,
@@ -258,7 +246,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -268,14 +255,10 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           if(j==max.iter){
-            # Create csv file
             filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
             write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
         else if(param.name=="alpha"){
-          # DataGen(folder.data, filename.data, alpha=param, method=method,
-          #         relative.cost=relative.cost, G=G, C1=C1, beta=beta, gamma=gamma, B=B)
-          # perf.measure[j,] <- ModelFit(data.path, method=method)
           
           filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
           B.Opt <- DataGen(folder.data, filename.data, alpha=param, method=method,
@@ -290,7 +273,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -306,10 +288,7 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
           
         }
         else if(param.name=="beta"){
-          # DataGen(folder.data, filename.data, beta=param, method=method,
-          #         relative.cost=relative.cost, G=G, alpha=alpha, C1=C1, gamma=gamma, B=B)
-          # perf.measure[j,] <- ModelFit(data.path, true.beta=param, method=method)
-          
+
           filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
           B.Opt <- DataGen(folder.data, filename.data, beta=param, method=method,
                   relative.cost=relative.cost, alpha=alpha, C1=C1, gamma=gamma, B=B)
@@ -323,7 +302,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -333,14 +311,10 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           if(j==max.iter){
-            # Create csv file
             filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
             write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
         else if(param.name=="gamma"){
-          # DataGen(folder.data, filename.data, gamma=param, method=method,
-          #         relative.cost=relative.cost, G=G, alpha=alpha, beta=beta, C1=C1, B=B)
-          # perf.measure[j,] <- ModelFit(data.path, method=method)
           
           filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
           B.Opt <- DataGen(folder.data, filename.data, gamma=param, method=method,
@@ -355,7 +329,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -365,16 +338,11 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           if(j==max.iter){
-            # Create csv file
             filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
             write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)
             }
         }
         else if(param.name=="B"){
-          # DataGen(folder.data, filename.data, B=param, method=method,
-          #         relative.cost=relative.cost, G=G, alpha=alpha, beta=beta, gamma=gamma, C1=C1)
-          # perf.measure[j,] <- ModelFit(data.path, method=method)
-          
           filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j)
           B.Opt <- DataGen(folder.data, filename.data, B=param, method=method,
                   relative.cost=relative.cost, alpha=alpha, beta=beta, gamma=gamma, C1=C1)
@@ -388,7 +356,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           for(k in 1:K){
-            #print(k)
             filename.data = paste0("sim",'_',method,'_',param.name,'_',param,'_',j,'_',G[k],'_',R[k])
             data.path = paste0(folder.data, filename.data, "_data.csv")
             measure <- ModelFit(data.path, method=method)
@@ -398,7 +365,6 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
             }
             
           if(j==max.iter){
-            # Create csv file
             filename.perf = paste0("sim",'_',method,'_',param.name,'_',param)
             write.csv(perf.measure, paste0(folder.perf, filename.perf, "_perf.csv"), row.names=FALSE)}
         }
@@ -407,16 +373,38 @@ ParamVary <- function(param.ls, param.name, method, max.iter = 5,
   }
 }
 
+
 MeasureGen <- function(param.ls, param.name, method, 
                        folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf"){
 
-  # perf.measure.final <- matrix(NA, nrow = length(param.ls), ncol = 5)
-  # colnames(perf.measure.final) <- c(param.name, "sd.est.beta", "avg.se", "G", "R")
-  # perf.measure.final[,1] <- param.ls
-  
   param.len <- length(param.ls)
-  #result.ls <- vector("list", 4*param.len)
-  #Each param is associated with one table and three plots
+  result.ls <- vector("list", param.len)
+  
+  for(i in 1:param.len){
+    param = param.ls[i]
+    file.i <- list.files(path = folder.perf,
+                                 pattern = paste0("sim",'_',method,'_',param.name,'_',param), 
+                                 full.names = T)  
+    file.df <- read.csv(file.i, stringsAsFactors = FALSE, header = TRUE)
+
+    result <- file.df %>%
+      group_by(G, R) %>%
+      summarise(
+        Var_Beta_Est = var(est.beta, na.rm = TRUE),  
+        Mean_SE_Sq = (mean(se, na.rm = TRUE))^2,
+        .groups = "drop")
+
+    result.ls[[i]] <- result
+
+  }
+  return(result.ls)
+}
+
+
+GRGen <- function(param.ls, param.name, method, 
+                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf"){
+
+  param.len <- length(param.ls)
   result.ls <- vector("list", param.len)
   
   for(i in 1:param.len){
@@ -426,365 +414,316 @@ MeasureGen <- function(param.ls, param.name, method,
                                  full.names = T)  
     file.df <- read.csv(file.i, stringsAsFactors = FALSE, header = TRUE)
     
-    #for(j in 1:4){
-      # idx <- (i-1)*4+j
-      # if(j==1){
-        tbl <- file.df %>%
-          group_by(G, R) %>%
-          summarise(
-            Var_Beta_Est = var(est.beta, na.rm = TRUE),  
-            Mean_SE_Sq = (mean(se, na.rm = TRUE))^2,
-            .groups = "drop")
-      
-        result.ls[[i]] <- tbl
-      #}
-      # else{
-      #   if(j==2){
-      #     plot1 <- ggplot(tbl, aes(x = G, y = R)) +
-      #                 geom_bar(stat = "identity", fill = "lightgreen") +
-      #                 labs(title = "Recruitment Options",
-      #                   x = "G", y = "R") + theme_minimal()
-      #     result.ls[[idx]] <- plot1
-      #   }
-      #   else if(j==2){
-      #       plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est)) +
-      #                   geom_bar(stat = "identity", fill = "skyblue") +
-      #                   labs(
-      #                     title = "Variance of Beta Estimates",
-      #                     x = "G", y = "Variance of Beta Estimates") + theme_minimal()
-      #       result.ls[[idx]] <- plot2
-      #   }
-      #   else if(j==2){
-      #       plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq)) +
-      #                   geom_bar(stat = "identity", fill = "purple") +
-      #                   labs(
-      #                     title = "Mean SE Squared",
-      #                     x = "G", y = "Mean SE Squared") + theme_minimal()
-      #       result.ls[[idx]] <- plot3
-      #   }
-      #}
-      
-    #}
+    result <- file.df %>% 
+        group_by(G, R) %>%
+        summarise(
+          Var_Beta_Est = var(est.beta, na.rm = TRUE),  
+          .groups = "drop") %>%
+        slice_min(order_by = Var_Beta_Est, n = 1)%>%
+          unite("combined", G:R, sep = ", ") %>%  
+          pull(combined)#character
 
-    #perf.measure.final[i,-1] <- c(sd(file.df[,1]), colMeans(file.df[,-1], na.rm = T))
+    result.ls[[i]] <- result
+
   }
-  #print(perf.measure.final)
-  #return(perf.measure.final)
-  # return(knitr::kable(perf.measure.final,
-  #            digits = 5, caption = paste0("Vary ", param, " & Method is ", method)))
   return(result.ls)
 }
 ```
 
+# Tables and Figures
+
 ```{r}
-#3 common problems:
-#boundary (singular) fit: see help('isSingular')
-
-#Error: no more error handlers available (recursive errors?); invoking 'abort' restart
-
-#Warning: type 29 is unimplemented in 'type2char'Error in data.frame(rbind(c("algorithm", "character", paste("NLOPT_GN_DIRECT",  : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-
-#Error in DataSim(G, R, alpha, beta, gamma, method) : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
-
-#Show in New Window, Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-
-#Warning: Model failed to converge with max|grad| = 0.218378 (tol = 0.002, component 1)fixed-effect model matrix is rank deficient so dropping 1 column / coefficient fixed-effect model matrix is rank deficient so dropping 1 column / coefficient Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-
-#Error: no more error handlers available (recursive errors?); invoking 'abort' restart Warning: type 29 is unimplemented in 'type2char'Error in stopifnot(length(class2) == 1L) : INTEGER() can only be applied to a 'integer', not a 'unknown type #29'
-
 method = "normal"
 param.name = "C1"
-#param.ls = c(6,10,12,16,20)
-#param.ls = c(10,20,30,40,50)
-#param.ls = c(10,15,20,25,30)
 param.ls = c(10,20,30)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
-result.C1.normal <- MeasureGen(param.ls, param.name, method)
+#result.C1.normal <- MeasureGen(param.ls, param.name, method)
+GR.C1.normal <- GRGen(param.ls, param.name, method)
 
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.C1.normal[[i]]
-  
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.y = element_text(size = 5),
-                    axis.text.x = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.y = element_text(size = 5),
-                    axis.text.x = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+  # tbl <- result.C1.normal[[i]]
+  # plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+  #             geom_line(color = "lightgreen", linewidth = 1) + 
+  #             geom_point(color = "lightgreen", size = 2) +  
+  #             labs(title = "Recruitment Options", x = "G", y = "R") +
+  #             theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5))
+  # 
+  # plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+  #             geom_line(color = "skyblue", linewidth = 1) +  
+  #             geom_point(color = "skyblue", size = 2) +  
+  #             labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+  #             theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5))
+  #             
+  # plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+  #             geom_line(color = "purple", linewidth = 1) +  
+  #             geom_point(color = "purple", size = 2) +  
+  #             labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+  #             theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5))
+  # 
+  # header <- textGrob(paste0(method,', ',param.name,'=',param), 
+  #                    gp = gpar(fontsize = 7, fontface = "bold"))
+  # 
+  # grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+#}
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, alpha=5, beta=3, gamma=2, B=5000)
-result.C1.poisson <- MeasureGen(param.ls, param.name, method)
+#result.C1.poisson <- MeasureGen(param.ls, param.name, method)
+GR.C1.poisson <- GRGen(param.ls, param.name, method)
 
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.C1.poisson[[i]]
-  
-    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
+GR.pair.C1 <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.C1.normal),  
+  Poisson = unlist(GR.C1.poisson))
+knitr::kable(GR.pair.C1,caption = "(G,R) pair, vary c1")
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+  # tbl <- result.C1.poisson[[i]]
+  # 
+  # plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+  #             geom_line(color = "lightgreen", linewidth = 1) + 
+  #             geom_point(color = "lightgreen", size = 2) +  
+  #             labs(title = "Recruitment Options", x = "G", y = "R") +
+  #             theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5))
+  # 
+  # plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+  #             geom_line(color = "skyblue", linewidth = 1) +  
+  #             geom_point(color = "skyblue", size = 2) +  
+  #             labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+  #             theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5))
+  #             
+  # plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+  #             geom_line(color = "purple", linewidth = 1) +  
+  #             geom_point(color = "purple", size = 2) +  
+  #             labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+  #             theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+  #             theme(plot.title = element_text(size = 5),
+  #                   axis.text.x = element_text(size = 5),
+  #                   axis.text.y = element_text(size = 5))
+  # 
+  # header <- textGrob(paste0(method,', ',param.name,'=',param), 
+  #                    gp = gpar(fontsize = 7, fontface = "bold"))
+  # 
+  # grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+#}
 ```
 
 ```{r}
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "relative.cost"
 param.ls = c(4, 5, 10)
-#param.ls = c(5, 10)
 
 method = "normal"
 ParamVary(param.ls, param.name, method,
           C1=20, alpha=5, beta=3, gamma=2, B=5000)
-result.rc.normal <- MeasureGen(param.ls, param.name, method)
-
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.rc.normal[[i]]
-  
-   plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+GR.rc.normal <- GRGen(param.ls, param.name, method)
+#result.rc.normal <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.rc.normal[[i]]
+#   
+#    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           C1=20, alpha=5, beta=3, gamma=2, B=5000)
-result.rc.poisson <- MeasureGen(param.ls, param.name, method)
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.rc.poisson[[i]]
-  
-    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+GR.rc.poisson <- GRGen(param.ls, param.name, method)
+GR.pair.rc <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.rc.normal),  
+  Poisson = unlist(GR.rc.poisson))
+knitr::kable(GR.pair.rc, caption = "(G,R) pair, vary relative cost")
+#result.rc.poisson <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.rc.poisson[[i]]
+#   
+#     plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 ```
 
 ```{r}
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "alpha"
-#param.ls = c(1,3,5,7,9)
-#param.ls = c(1,2,3,4,5)
 param.ls = c(5,6,7)
 
 method = "normal"#should not matter
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, beta=3, gamma=2, B=5000)
-result.alpha.normal <- MeasureGen(param.ls, param.name, method)
-
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.alpha.normal[[i]]
-  
-    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+GR.alpha.normal <- GRGen(param.ls, param.name, method)
+#result.alpha.normal <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.alpha.normal[[i]]
+#   
+#     plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 
 method ="poisson"
-# ParamVary(param.ls, param.name, method,
-#           relative.cost=2, C1=20, beta=2, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, beta=3, gamma=2, B=5000)
-result.alpha.poisson <- MeasureGen(param.ls, param.name, method)
-
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.alpha.poisson[[i]]
-  
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+GR.alpha.poisson <- GRGen(param.ls, param.name, method)
+GR.pair.alpha <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.alpha.normal),  
+  Poisson = unlist(GR.alpha.poisson))
+knitr::kable(GR.pair.alpha, caption = "(G,R) pair, vary alpha")
+#result.alpha.poisson <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.alpha.poisson[[i]]
+#   
+#   plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 ```
 
 ```{r}
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-
-#Warning: convergence code 3 from bobyqa: bobyqa -- a trust region step failed to reduce q
-
-#fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
-
 param.name = "beta"
-#param.ls = c(0.1, 0.5, 1, 3, 5)
-param.ls = c(1,2,3,4,5)
+param.ls = c(1,3,5)
 
 method = "normal"
-# ParamVary(param.ls, param.name, method,
-#           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, gamma=2, B=5000)
 result.beta.normal <- MeasureGen(param.ls, param.name, method)
+GR.beta.normal <- GRGen(param.ls, param.name, method)
 
 for(i in 1:length(param.ls)){
   param = param.ls[i]
@@ -824,11 +763,10 @@ for(i in 1:length(param.ls)){
 }
 
 method ="poisson"
-# ParamVary(param.ls, param.name, method,
-#           relative.cost=2, C1=20, alpha=5, gamma=1, B=5000)
 ParamVary(param.ls, param.name, method,
            relative.cost=2, C1=20, alpha=5, gamma=2, B=5000)
 result.beta.poisson <- MeasureGen(param.ls, param.name, method)
+GR.beta.poisson <- GRGen(param.ls, param.name, method)
 
 for(i in 1:length(param.ls)){
   param = param.ls[i]
@@ -866,20 +804,22 @@ for(i in 1:length(param.ls)){
 
   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
+
+GR.pair.beta <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.beta.normal),  
+  Poisson = unlist(GR.beta.poisson))
+knitr::kable(GR.pair.beta, caption = "(G,R) pair, vary beta")
 ```
 
 ```{r}
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "gamma"
-#param.ls = c(0.5, 1, 2, 3, 4, 5)
-#param.ls = c(2, 2.5, 3)
-#param.ls = c(2,3)
 param.ls = c(1,2,3)
-#param.ls = c(1, 1.5, 2)
 method = "normal"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
 result.gamma.normal <- MeasureGen(param.ls, param.name, method)
+GR.gamma.normal <- GRGen(param.ls, param.name, method)
 
 for(i in 1:length(param.ls)){
   param = param.ls[i]
@@ -922,6 +862,7 @@ method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, B=5000)
 result.gamma.poisson <- MeasureGen(param.ls, param.name, method)
+GR.gamma.poisson <- GRGen(param.ls, param.name, method)
 
 for(i in 1:length(param.ls)){
   param = param.ls[i]
@@ -959,114 +900,120 @@ for(i in 1:length(param.ls)){
 
   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
+
+GR.pair.gamma <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.gamma.normal),  
+  Poisson = unlist(GR.gamma.poisson))
+knitr::kable(GR.pair.gamma, caption = "(G,R) pair, vary gamma")
 ```
 
 ```{r}
-#fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
-#Error in summ$coefficients["X", "Estimate"] : subscript out of bounds
 param.name = "B"
-#param.ls = c(1000, 1500, 2000, 2500, 3000)
-#param.ls = c(3000, 3500, 4000)
 param.ls = c(3000, 4000, 5000)
 
 method = "normal"
-# ParamVary(param.ls, param.name, method,
-#           relative.cost=2, C1=20, alpha=5, beta=3, gamma=1)
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, gamma=2)
-result.B.normal <- MeasureGen(param.ls, param.name, method)
-
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.B.normal[[i]]
-  
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.x = element_text(size = 5),
-                    axis.text.y = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+GR.B.normal <- GRGen(param.ls, param.name, method)
+#result.B.normal <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.B.normal[[i]]
+#   
+#   plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 
 method ="poisson"
 ParamVary(param.ls, param.name, method,
           relative.cost=2, C1=20, alpha=5, beta=3, gamma=2)
-result.B.poisson <- MeasureGen(param.ls, param.name, method)
+GR.B.poisson <- GRGen(param.ls, param.name, method)
+GR.pair.B <- data.frame(
+  Param = param.ls, 
+  Normal = unlist(GR.B.normal),  
+  Poisson = unlist(GR.B.poisson))
+knitr::kable(GR.pair.B, caption = "(G,R) pair, vary B")
 
-for(i in 1:length(param.ls)){
-  param = param.ls[i]
-  tbl <- result.B.poisson[[i]]
-  
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
-              geom_line(color = "lightgreen", linewidth = 1) + 
-              geom_point(color = "lightgreen", size = 2) +  
-              labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.y = element_text(size = 5),
-                    axis.text.x = element_text(size = 5))
-  
-  plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
-              geom_line(color = "skyblue", linewidth = 1) +  
-              geom_point(color = "skyblue", size = 2) +  
-              labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.y = element_text(size = 5),
-                    axis.text.x = element_text(size = 5))
-              
-  plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  
-              geom_point(color = "purple", size = 2) +  
-              labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
-              theme(plot.title = element_text(size = 5),
-                    axis.text.y = element_text(size = 5),
-                    axis.text.x = element_text(size = 5))
-  
-  header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 7, fontface = "bold"))
-
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
-}
+# result.B.poisson <- MeasureGen(param.ls, param.name, method)
+# for(i in 1:length(param.ls)){
+#   param = param.ls[i]
+#   tbl <- result.B.poisson[[i]]
+#   
+#   plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+#               geom_line(color = "lightgreen", linewidth = 1) + 
+#               geom_point(color = "lightgreen", size = 2) +  
+#               labs(title = "Recruitment Options", x = "G", y = "R") +
+#               theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5))
+#   
+#   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
+#               geom_line(color = "skyblue", linewidth = 1) +  
+#               geom_point(color = "skyblue", size = 2) +  
+#               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
+#               theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5))
+#               
+#   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
+#               geom_line(color = "purple", linewidth = 1) +  
+#               geom_point(color = "purple", size = 2) +  
+#               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
+#               theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+#               theme(plot.title = element_text(size = 5),
+#                     axis.text.y = element_text(size = 5),
+#                     axis.text.x = element_text(size = 5))
+#   
+#   header <- textGrob(paste0(method,', ',param.name,'=',param), 
+#                      gp = gpar(fontsize = 7, fontface = "bold"))
+# 
+#   grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
+# }
 ```
 
-# Analysis and Results
+# Results
 
-The default parameters used in the simulations are $B=5000$, $C_1 = 20$, relative cost of $C_1$ versus $C_2 = 2$, $\alpha = 5$, $\beta = 3$, $\gamma = 2$, and $\sigma = 0.5$. When one variable changes, the others remain constant to isolate its effect. Comparisons are made by examining all generated plots. Simulations demonstrated that increasing the number of clusters ($G$) improves the reliability of treatment effect estimates, as both the variance of beta estimates and the mean squared standard errors decrease. Unsurprisingly, due to budget constraints, the number of observations per cluster ($R$) decreases as $G$ increases. Increasing the budget ($B$) allows for more clusters to be included. When $C_1$ (the cost per new cluster) increases, the maximum number of clusters ($G$) decreases because recruiting new clusters becomes more expensive. Similarly, as the relative cost increases, it becomes more economical to continue collecting observations within existing clusters, increasing R. Increasing ($\alpha$) and ($\beta$) values reduces the variance of ($\beta$) estimates by improving the signal-to-noise ratio. This effect is more consistent in the normal model. In contrast, the poisson model exhibits greater variability, particularly for small clusters, resulting in less stable estimates. Higher values of ($\gamma^2$) amplify the variability of estimates, with considerably greater impact on the poisson model compared to the normal model. This leads to greater variance and higher mean squared standard errors in the poisson model. These findings highlight the trade-offs in balancing cluster recruitment and within-cluster observations under budget constraints.
+The default parameters used in the simulations are $B=5000$, $C_1 = 20$, relative cost of $C_1$ versus $C_2 = 2$, $\alpha = 5$, $\beta = 3$, $\gamma = 2$, and $\sigma = 0.5$. When one variable changes, the others remain constant to isolate its effect. Comparisons are made by analyzing all the generated plots, though most are excluded from the report to save space. Simulations demonstrated that increasing the number of clusters ($G$) improves the reliability of treatment effect estimates, as both the variance of beta estimates and the mean squared standard errors decrease. Unsurprisingly, due to budget constraints, the number of observations per cluster ($R$) decreases as $G$ increases. Increasing the budget ($B$) allows for more clusters to be included. When $C_1$ (the cost per new cluster) increases, the maximum number of clusters ($G$) decreases because recruiting new clusters becomes more expensive. Similarly, as the relative cost increases, it becomes more economical to continue collecting observations within existing clusters, increasing R. Increasing $\alpha$ and $\beta$ values reduces the variance of $\beta$ estimates by improving the signal-to-noise ratio. This effect is more consistent in the normal model. In contrast, the poisson model exhibits greater variability, particularly for small clusters, resulting in less stable estimates. Higher values of ($\gamma^2$) amplify the variability of estimates, with considerably greater impact on the poisson model compared to the normal model. This leads to greater variance and higher mean squared standard errors in the poisson model.
+
+The summary tables are generated by selecting the optimal ($G$, $R$) pair that minimizes the variance of the estimated beta. Consistent with observations from the plots, as $c_1$ (cost per new cluster) increases, the number of clusters ($G$) decreases. Similarly, as the relative cost ratio $c_1/c_2$ grows, acquiring additional observations within existing clusters is expected to become more cost-effective, potentially leading to an increase in $R$. However, no clear trend of increasing $R$ is observed in either the normal or poisson settings. In the poisson model, increasing $\alpha$ intensifies the exponential relationship, influencing both $G$ and $R$, though no obvious pattern of increase or decrease is evident. Higher $\beta$ values improve the signal-to-noise ratio, thereby stabilizing the estimates. The poisson model typically selects smaller $G$ values than the normal model. Larger $\gamma^2$ amplifies variability, particularly in the Poisson model, thereby reducing stability. In response to higher $\gamma^2$, the poisson model tends to select larger $G$ values. As the budget ($B$) increases, the normal model reduces the number of clusters ($G$) while increasing the number of observations per cluster ($R$). Conversely, the Poisson model focuses on increasing the number of clusters ($G$).
 
 # Limitations
 
-The simulations offer data-driven insights into the design of cluster-randomized trials; however, several limitations should be acknowledged. Firstly, the models rely on simplified hierarchical frameworks with independent clusters, but clusters can have dependencies in reality. Moreover, the simulations do not account for missing data and imbalanced treatment, which are common challenges in real life. Furthermore, we assume no measurement error and unobserved confounding, which may oversimplify the real-world problems. Due to time constraints, the maximum number of iterations (max.iter) was limited to 5, which may have influenced the findings. Running simulations with more iterations could provide more reliable results. Future research addressing these limitations can provide a deeper understanding of the trade-offs in designing cost-effective cluster-randomized trials.
+The simulations offer data-driven insights into the design of cluster-randomized trials; however, several limitations should be acknowledged. Firstly, the models rely on simplified hierarchical frameworks with independent clusters, but clusters can have dependencies in reality. Moreover, the simulations do not account for missing data and imbalanced treatment, which are common challenges in real life. Furthermore, we assume no measurement error and unobserved confounding, which may oversimplify the real-world problems. Due to time constraints, the maximum number of iterations (max.iter) was limited to 5, which may have influenced the findings. Running simulations with more iterations could provide more reliable results. Only three values were varied for each parameter, which limits the scope of the analysis. Exploring a wider range of values and including additional variations could provide more insights. Additionally, varying multiple parameters simultaneously in a nested loop could help assess the relationships between variables, offering a more comprehensive understanding of their combined effects. Future research addressing these limitations can provide a deeper understanding of the trade-offs in designing cost-effective cluster-randomized trials.
 
 \newpage
-
-# Appendix Figures
 
 # Code Appendix
 
