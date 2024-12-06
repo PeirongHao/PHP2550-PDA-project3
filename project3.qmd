@@ -13,6 +13,7 @@ execute:
   error: false
   eval: true
   output: true
+  fig-height: 2
 ---
 
 # Abstract
@@ -197,7 +198,7 @@ GetR <- function(G, B, C1, C2){
 #param: C1, relative.cost, beta, gamma, (change alpha only for poisson case)
 #do not change p.trt, sigma
 #could change B as well
-ParamVary <- function(param.ls, param.name, method, max.iter = 20, 
+ParamVary <- function(param.ls, param.name, method, max.iter = 5, 
                       folder.data = "~/Documents/GitHub/PHP2550-PDA-project3/Data/",
                       folder.perf = "~/Documents/GitHub/PHP2550-PDA-project3/Perf/",
                       C1=20, relative.cost=2, alpha=5, beta=3, gamma=2, B=5000){
@@ -510,24 +511,33 @@ for(i in 1:length(param.ls)){
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -539,28 +549,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.C1.poisson[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
@@ -579,28 +598,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.rc.normal[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+   plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -611,28 +639,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.rc.poisson[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
@@ -652,28 +689,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.alpha.normal[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -691,24 +737,33 @@ for(i in 1:length(param.ls)){
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
@@ -735,28 +790,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.beta.normal[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -770,28 +834,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.beta.poisson[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
@@ -812,28 +885,37 @@ for(i in 1:length(param.ls)){
   param = param.ls[i]
   tbl <- result.gamma.normal[[i]]
   
-  plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
+    plot1 <- ggplot(tbl, aes(x = G, y = R, group = 1)) +
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -849,24 +931,33 @@ for(i in 1:length(param.ls)){
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
@@ -893,24 +984,33 @@ for(i in 1:length(param.ls)){
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.x = element_text(size = 5),
+                    axis.text.y = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 
 method ="poisson"
@@ -926,24 +1026,33 @@ for(i in 1:length(param.ls)){
               geom_line(color = "lightgreen", linewidth = 1) + 
               geom_point(color = "lightgreen", size = 2) +  
               labs(title = "Recruitment Options", x = "G", y = "R") +
-              theme_minimal() + ylim(0, 700)
+              theme_minimal() + ylim(0, 700) + xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
   
   plot2 <- ggplot(tbl, aes(x = G, y = Var_Beta_Est, group = 1)) +
               geom_line(color = "skyblue", linewidth = 1) +  
               geom_point(color = "skyblue", size = 2) +  
               labs(title = "Variance of Beta Estimates",x = "G",y = "Variance of Beta Estimates") +
-              theme_minimal() + ylim(0, 15)
+              theme_minimal() + ylim(0, 15)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
               
   plot3 <- ggplot(tbl, aes(x = G, y = Mean_SE_Sq, group = 1)) +
-              geom_line(color = "purple", linewidth = 1) +  # Use `linewidth` instead of `size`
-              geom_point(color = "purple", size = 2) +  # Points still use `size`
+              geom_line(color = "purple", linewidth = 1) +  
+              geom_point(color = "purple", size = 2) +  
               labs(title = "Mean SE Squared",x = "G",y = "Mean SE Squared") +
-              theme_minimal() + ylim(0, 10)
+              theme_minimal() + ylim(0, 10)+ xlim(0, 275)+
+              theme(plot.title = element_text(size = 5),
+                    axis.text.y = element_text(size = 5),
+                    axis.text.x = element_text(size = 5))
   
   header <- textGrob(paste0(method,', ',param.name,'=',param), 
-                     gp = gpar(fontsize = 16, fontface = "bold"))
+                     gp = gpar(fontsize = 7, fontface = "bold"))
 
-  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.1, 1))
+  grid.arrange(header,arrangeGrob(plot1, plot2, plot3, nrow = 1),heights = c(0.05, 1))
 }
 ```
 
