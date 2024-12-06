@@ -5,8 +5,11 @@ This simulation project investigates optimal recruitment designs for cluster-ran
 
 ## Folders and Files
 project3.qmd: This file includes R code and text explanations for both the Exploratory Data Analysis and Statistical Analysis.
+
 project3.pdf: A PDF version of the report, including a Code Appendix at the end.
+
 Data: Simulated datasets stored in CSV files.
+
 Performance: Performance measures include the estimated beta values and their corresponding standard errors.
 
 ## Dependencies
