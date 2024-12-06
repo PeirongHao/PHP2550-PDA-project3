@@ -1058,13 +1058,7 @@ for(i in 1:length(param.ls)){
 
 # Analysis and Results
 
-<<<<<<< Updated upstream
-
-=======
-The simulation analysis assessed the performance of different trial designs by altering parameters such as C_1 (cost per cluster), GGG (number of clusters), and the overall budget (BBB). The results for Normal outcomes indicated that increasing GGG while sustaining a controllable RRR enhanced the accuracy of treatment effect estimates, as reflected by decreases in sd(beta). Comparable trends were found for the Poisson outcomes; however, the variance in the estimates was typically greater.
-As the relative cost of additional observations (c2) decreased in comparison to (c1), the allocation transitioned towards fewer clusters with more observations per cluster, leading to a slight reduction in precision in high-variance situations. Moreover, increased budgets facilitated the inclusion of additional clusters and repeated measures in each cluster, thus diminishing standard errors and enhancing coverage probabilities. In situations with a larger gamma^2, adding the number of clusters yielded diminishing returns, underscoring the necessity of balancing cluster-level and within-cluster variability in trial design.
-These findings highlight the necessity of adjusting trial designs to the specific variance structures and financial constraints of the study context. The trade-offs between cluster size and intra-cluster metrics provide practical insights for real-world applications.
->>>>>>> Stashed changes
+The default parameters used in the simulations are $B=5000$, $C_1 = 20$, relative cost of $C_1$ versus $C_2 = 2$, $\alpha = 5$, $\beta = 3$, $\gamma = 2$, and $\sigma = 0.5$. When one variable changes, the others remain constant to isolate its effect. Comparisons are made by examining all generated plots. Simulations demonstrated that increasing the number of clusters ($G$) improves the reliability of treatment effect estimates, as both the variance of beta estimates and the mean squared standard errors decrease. Unsurprisingly, due to budget constraints, the number of observations per cluster ($R$) decreases as $G$ increases. When $C_1$ (the cost per new cluster) increases, the maximum number of clusters ($G$) decreases because recruiting new clusters becomes more expensive. Similarly, as the relative cost increases, it becomes more economical to continue collecting observations within existing clusters, increasing R. Changes in $\alpha$ and $\beta$ positively influence the variance of beta estimates. At the same time, $\gamma$ strongly impacts the variance of beta estimates, underscoring its critical role in trial design. Increasing the budget ($B$) allows for more clusters to be included but does not affect the variance of beta estimates or the mean squared standard errors. These findings highlight the trade-offs in balancing cluster recruitment and within-cluster observations under budget constraints.
 
 # Limitations
 
