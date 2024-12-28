@@ -32,7 +32,7 @@ We generate the data using hierarchical models. Observations $j$ range from 1 to
 
 ## Estimands
 
-The primary estimand is the treatment effect ($\hat \beta$), contributing to the outcome difference between the treatment and control groups. In the normal scenario, $\beta$ reflects the difference in cluster-level means between the two groups, while in the poisson scenario, $\hat \beta$ represents the log-scale difference in cluster-level means. Importantly, $\beta$ is an unbiased estimate. The precision and accuracy of $\hat \beta$ are assessed by examining the variance of the estimates and the squared average standard error of the estimates.
+The primary estimand is the treatment effect ($\beta$), contributing to the outcome difference between the treatment and control groups. In the normal scenario, $\beta$ reflects the difference in cluster-level means between the two groups, while in the poisson scenario, $\beta$ represents the log-scale difference in cluster-level means. Importantly, $\beta$ is an unbiased estimate. The precision and accuracy of $\beta$ are assessed by examining the variance of the estimates and the squared average standard error of the estimates.
 
 ## Methods
 
