@@ -1,4 +1,4 @@
-# PHP 2550 PDA Project3: Optimizing Recruitment Designs for Cluster-Randomized Trials Under Budget Constraints
+# PHP 2550 PDA Project3: Optimizing Cluster-Randomized Trial Designs
 
 ## Summary
 This project investigates the optimization of recruitment strategies for cluster-randomized trials under budget constraints. Through hierarchical modeling, we examine both normal and poisson distributions to understand how different outcome types affect trial design. The core focus lies in determining the optimal balance between the number of clusters (G) and observations per cluster (R), while operating within fixed budget constraints (B). Our analysis incorporates realistic cost considerations, including the expenses associated with recruiting new clusters (c1) and gathering additional measurements within existing clusters (c2). The study systematically varies key parameters – the intercept (α), treatment effect (β), and cluster-level variance (γ2) – to comprehensively understand their influence on design choices and estimation precision.
